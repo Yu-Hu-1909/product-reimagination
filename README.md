@@ -63,8 +63,6 @@ Transform your to-do list into an optimized schedule automatically.
 - `holidays.js`: Holiday data & auto-import logic.
 - `styles.css`: All application styling.
 
-## 💡 AI Prompt Engineering
-
 The AI scheduler uses a sophisticated prompt structure that considers:
 
 - User's productive/unproductive hours.

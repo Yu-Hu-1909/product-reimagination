@@ -5,7 +5,7 @@ import { getAllCategories } from './categories.js';
 
 // Gemini API Configuration
 const GEMINI_API_KEY = 'AIzaSyBWe1GWNmvoeFc0_-GntBQiMNMypMhQQ3A';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 
 // Task storage

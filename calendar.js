@@ -1,6 +1,7 @@
 // Firebase imports
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, query, onSnapshot, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { loadUserCategories, getAllCategories, toggleCategoryVisibility } from './categories.js';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -41,14 +42,23 @@ export const calendarState = {
     currentDate: new Date(),
     currentView: 'month', // month, week, or day
     selectedDate: new Date(),
-    events: []
+    events: [],
+    categories: [] // Add categories to state
 };
 
 // Initialize calendar when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load categories first
+    calendarState.categories = await loadUserCategories();
+    renderCategoriesSidebar();
+    
     initCalendar();
     setupEventListeners();
     loadEvents();
+    
+    // Check if user needs onboarding
+    const { checkOnboarding } = await import('./onboarding.js');
+    await checkOnboarding();
 });
 
 function initCalendar() {
@@ -201,10 +211,21 @@ function createCalendarCell(day, month, year, isOtherMonth) {
     const today = new Date();
     const isToday = date.toDateString() === today.toDateString();
 
-    // Filter events for this date
+    // Get visible categories
+    const visibleCategories = calendarState.categories.filter(c => c.isVisible);
+    const visibleCategoryIds = visibleCategories.map(c => c.id);
+
+    // Filter events for this date AND check if category is visible
     const dayEvents = calendarState.events.filter(event => {
         const eventDate = new Date(event.startDate.seconds * 1000);
-        return eventDate.toDateString() === date.toDateString();
+        const isSameDay = eventDate.toDateString() === date.toDateString();
+        
+        // Check if event's category is visible (or show if no category)
+        const isVisible = event.categoryId ? 
+            visibleCategoryIds.includes(event.categoryId) : 
+            true; // Show events without category for backward compatibility
+        
+        return isSameDay && isVisible;
     });
 
     const eventBadges = dayEvents.slice(0, 3).map(event => 
@@ -294,7 +315,10 @@ function loadEvents() {
 }
 
 function formatDate(date) {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function openEventModal(dateStr, eventId = null) {
@@ -311,4 +335,203 @@ document.addEventListener('click', (e) => {
     }
 });
 
-export { currentUser, formatDate };
+// Render categories in sidebar
+function renderCategoriesSidebar() {
+    const categoriesList = document.getElementById('categoriesList');
+    if (!categoriesList) return;
+    
+    const categories = getAllCategories();
+    
+    categoriesList.innerHTML = categories.map(category => `
+        <div class="calendar-item">
+            <input type="checkbox" id="cat_${category.id}" ${category.isVisible ? 'checked' : ''} data-category-id="${category.id}">
+            <label for="cat_${category.id}">
+                <span class="color-dot" style="background: ${category.color};"></span>
+                ${category.name}
+            </label>
+        </div>
+    `).join('');
+    
+    // Add event listeners to checkboxes
+    categories.forEach(category => {
+        const checkbox = document.getElementById(`cat_${category.id}`);
+        if (checkbox) {
+            checkbox.addEventListener('change', async (e) => {
+                await toggleCategoryVisibility(category.id);
+                renderCalendar(); // Re-render calendar to show/hide events
+            });
+        }
+    });
+}
+
+// Settings modal handlers
+const settingsBtn = document.getElementById('settingsBtn');
+const manageCategoriesBtn = document.getElementById('manageCategoriesBtn');
+const settingsModal = document.getElementById('settingsModal');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+
+if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+        openSettingsModal();
+    });
+}
+
+if (manageCategoriesBtn) {
+    manageCategoriesBtn.addEventListener('click', () => {
+        openSettingsModal();
+    });
+}
+
+if (closeSettingsBtn) {
+    closeSettingsBtn.addEventListener('click', () => {
+        closeSettingsModal();
+    });
+}
+
+if (settingsModal) {
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            closeSettingsModal();
+        }
+    });
+}
+
+function openSettingsModal() {
+    if (settingsModal) {
+        settingsModal.classList.add('active');
+        loadCategoriesInSettings();
+    }
+}
+
+function closeSettingsModal() {
+    if (settingsModal) {
+        settingsModal.classList.remove('active');
+    }
+}
+
+function loadCategoriesInSettings() {
+    const categoriesListSettings = document.getElementById('categoriesListSettings');
+    if (!categoriesListSettings) return;
+    
+    const categories = getAllCategories();
+    
+    categoriesListSettings.innerHTML = categories.map(category => `
+        <div class="category-item-settings">
+            <div class="category-info">
+                <div class="category-color-preview" style="background: ${category.color};"></div>
+                <span class="category-name">${category.name}</span>
+                ${category.isDefault ? '<span class="category-default-badge">Default</span>' : ''}
+            </div>
+            <div class="category-actions">
+                ${!category.isDefault ? `
+                    <button class="category-action-btn delete-btn" data-category-id="${category.id}" title="Delete">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+    
+    // Add delete handlers
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const categoryId = e.currentTarget.dataset.categoryId;
+            await handleDeleteCategory(categoryId);
+        });
+    });
+}
+
+// Add category form handlers
+const addCategoryBtn = document.getElementById('addCategoryBtn');
+const addCategoryForm = document.getElementById('addCategoryForm');
+const cancelAddCategory = document.getElementById('cancelAddCategory');
+const saveNewCategory = document.getElementById('saveNewCategory');
+
+if (addCategoryBtn) {
+    addCategoryBtn.addEventListener('click', () => {
+        addCategoryForm.style.display = 'block';
+        addCategoryBtn.style.display = 'none';
+    });
+}
+
+if (cancelAddCategory) {
+    cancelAddCategory.addEventListener('click', () => {
+        addCategoryForm.style.display = 'none';
+        addCategoryBtn.style.display = 'flex';
+        document.getElementById('newCategoryName').value = '';
+        document.getElementById('newCategoryColor').value = '#1a73e8';
+    });
+}
+
+if (saveNewCategory) {
+    saveNewCategory.addEventListener('click', async () => {
+        await handleAddCategory();
+    });
+}
+
+async function handleAddCategory() {
+    const nameInput = document.getElementById('newCategoryName');
+    const colorInput = document.getElementById('newCategoryColor');
+    
+    const name = nameInput.value.trim();
+    const color = colorInput.value;
+    
+    if (!name) {
+        alert('Please enter a category name');
+        return;
+    }
+    
+    try {
+        const { addCategory } = await import('./categories.js');
+        await addCategory(name, color);
+        
+        // Refresh categories
+        calendarState.categories = await loadUserCategories();
+        
+        // Update UI
+        loadCategoriesInSettings();
+        renderCategoriesSidebar();
+        
+        // Reset form
+        nameInput.value = '';
+        colorInput.value = '#1a73e8';
+        addCategoryForm.style.display = 'none';
+        addCategoryBtn.style.display = 'flex';
+        
+        alert('Category added successfully!');
+    } catch (error) {
+        alert(error.message || 'Error adding category');
+    }
+}
+
+async function handleDeleteCategory(categoryId) {
+    if (!confirm('Are you sure you want to delete this category? Events using this category will still be visible.')) {
+        return;
+    }
+    
+    try {
+        const { deleteCategory } = await import('./categories.js');
+        await deleteCategory(categoryId);
+        
+        // Refresh categories
+        calendarState.categories = await loadUserCategories();
+        
+        // Update UI
+        loadCategoriesInSettings();
+        renderCategoriesSidebar();
+        
+        alert('Category deleted successfully!');
+    } catch (error) {
+        alert(error.message || 'Error deleting category');
+    }
+}
+
+// Listen for categories updated event
+window.addEventListener('categoriesUpdated', () => {
+    renderCategoriesSidebar();
+    renderCalendar();
+});
+
+export { currentUser, formatDate, renderCategoriesSidebar };

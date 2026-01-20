@@ -1,6 +1,6 @@
 // Firebase imports
 import { db, currentUser } from './calendar.js';
-import { collection, addDoc, serverTimestamp, Timestamp, query, where, getDocs, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { collection, addDoc, serverTimestamp, Timestamp, query, where, getDocs, doc, getDoc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // Indian Public Holidays 2026
 const indianHolidays2026 = [
@@ -34,10 +34,21 @@ async function autoImportHolidays() {
         const userRef = doc(db, 'users', currentUser);
         const userDoc = await getDoc(userRef);
         
-        // Check if user document has holidaysImported flag
-        if (userDoc.exists() && userDoc.data().holidaysImported) {
-            console.log('Holidays already imported for this user');
-            return;
+        // Always re-import holidays to fix old ones without categoryId
+        // Delete old holidays first
+        const eventsRef = collection(db, 'users', currentUser, 'events');
+        const oldHolidaysQuery = query(eventsRef, where('isHoliday', '==', true));
+        const oldHolidaysSnapshot = await getDocs(oldHolidaysQuery);
+        
+        // Delete old holidays
+        const deletePromises = [];
+        oldHolidaysSnapshot.forEach((docSnapshot) => {
+            deletePromises.push(deleteDoc(doc(db, 'users', currentUser, 'events', docSnapshot.id)));
+        });
+        
+        if (deletePromises.length > 0) {
+            await Promise.all(deletePromises);
+            console.log(`Deleted ${deletePromises.length} old holiday entries`);
         }
 
         console.log('Auto-importing Indian holidays for user:', currentUser);
@@ -52,14 +63,16 @@ async function autoImportHolidays() {
                 endDate: Timestamp.fromDate(new Date(holiday.date)),
                 startTime: '00:00', // 12:00 AM
                 endTime: '23:59',   // End of day
+                categoryId: 'cat_holidays', // Official Holidays category
+                categoryName: 'Official Holidays',
                 color: '#d50000',   // Red color for holidays
                 isHoliday: true,    // Flag to identify holidays
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             };
 
-            const eventsRef = collection(db, 'users', currentUser, 'events');
-            await addDoc(eventsRef, eventData);
+            const eventsCollection = collection(db, 'users', currentUser, 'events');
+            await addDoc(eventsCollection, eventData);
             importedCount++;
         }
 
@@ -69,7 +82,7 @@ async function autoImportHolidays() {
             holidaysImportedAt: serverTimestamp()
         }, { merge: true });
 
-        console.log(`Successfully auto-imported ${importedCount} holidays!`);
+        console.log(`Successfully auto-imported ${importedCount} holidays with proper categories!`);
 
     } catch (error) {
         console.error('Error auto-importing holidays:', error);

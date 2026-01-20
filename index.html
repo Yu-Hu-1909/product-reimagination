@@ -101,6 +101,16 @@
           <div id="categoriesList">
             <!-- Categories will be dynamically loaded here -->
           </div>
+
+          <button class="ai-plan-btn" id="aiPlanBtn">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <path
+                d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.10z"
+              />
+            </svg>
+            AI Plan Week
+          </button>
+
           <button class="manage-categories-btn" id="manageCategoriesBtn">
             <svg viewBox="0 0 24 24" width="16" height="16">
               <path
@@ -174,81 +184,10 @@
           </div>
 
           <div class="form-group">
-            <label>Color</label>
-            <div class="color-picker">
-              <button
-                type="button"
-                class="color-option active"
-                data-color="#1a73e8"
-                style="background: #1a73e8"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#d50000"
-                style="background: #d50000"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#e67c73"
-                style="background: #e67c73"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#f4511e"
-                style="background: #f4511e"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#f6bf26"
-                style="background: #f6bf26"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#33b679"
-                style="background: #33b679"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#0b8043"
-                style="background: #0b8043"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#039be5"
-                style="background: #039be5"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#3f51b5"
-                style="background: #3f51b5"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#7986cb"
-                style="background: #7986cb"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#8e24aa"
-                style="background: #8e24aa"
-              ></button>
-              <button
-                type="button"
-                class="color-option"
-                data-color="#616161"
-                style="background: #616161"
-              ></button>
-            </div>
+            <label for="eventCategory">Category</label>
+            <select id="eventCategory" required class="category-select">
+              <!-- Categories will be loaded dynamically -->
+            </select>
           </div>
 
           <div class="modal-actions">
@@ -270,6 +209,316 @@
             </div>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- AI Planner Modal -->
+    <div class="modal" id="aiPlannerModal">
+      <div class="modal-content ai-planner-modal-content">
+        <div class="modal-header">
+          <h3>🤖 AI Task Planner</h3>
+          <button class="close-btn" id="closeAiPlannerBtn">
+            <svg viewBox="0 0 24 24" width="24" height="24">
+              <path
+                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div class="ai-planner-content">
+          <p class="ai-planner-intro">
+            Let AI optimize your schedule based on your tasks and deadlines
+          </p>
+
+          <div class="date-range-section">
+            <div class="form-group">
+              <label for="planStartDate">Plan From</label>
+              <input type="date" id="planStartDate" required />
+            </div>
+            <div class="form-group">
+              <label for="planEndDate">To</label>
+              <input type="date" id="planEndDate" required />
+            </div>
+          </div>
+
+          <div class="tasks-section">
+            <div class="tasks-header">
+              <h4>Your Tasks</h4>
+              <button class="add-task-btn" id="addTaskBtn">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                </svg>
+                Add Task
+              </button>
+            </div>
+
+            <div id="tasksListPlanner">
+              <p class="empty-tasks">
+                No tasks added yet. Click "Add Task" to begin.
+              </p>
+            </div>
+          </div>
+
+          <div class="ai-actions">
+            <button class="btn-cancel" id="cancelAiPlanBtn">Cancel</button>
+            <button class="btn-generate" id="generateScheduleBtn">
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path
+                  d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"
+                />
+              </svg>
+              Generate Schedule
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div class="modal" id="addTaskModal">
+      <div class="modal-content add-task-modal-content">
+        <div class="modal-header">
+          <h3>Add Task</h3>
+          <button class="close-btn" id="closeAddTaskBtn">
+            <svg viewBox="0 0 24 24" width="24" height="24">
+              <path
+                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form id="addTaskForm">
+          <div class="form-group">
+            <label for="taskName">Task Name *</label>
+            <input
+              type="text"
+              id="taskName"
+              placeholder="e.g., Project XYZ, Movie Outing"
+              required
+              maxlength="50"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="taskDuration">Duration (hours) *</label>
+            <input
+              type="number"
+              id="taskDuration"
+              min="0.5"
+              max="24"
+              step="0.5"
+              placeholder="e.g., 2"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="taskDeadline">Deadline *</label>
+            <input type="date" id="taskDeadline" required />
+          </div>
+
+          <div class="form-group">
+            <label>Task Type *</label>
+            <div class="radio-group">
+              <label
+                ><input type="radio" name="taskType" value="deadline" checked />
+                Deadline - Complete by date</label
+              >
+              <label
+                ><input type="radio" name="taskType" value="daily" /> Daily -
+                Recurring every day</label
+              >
+              <label
+                ><input type="radio" name="taskType" value="oneday" /> One Day -
+                Must be done on that specific day</label
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Flexibility *</label>
+            <div class="radio-group">
+              <label
+                ><input
+                  type="radio"
+                  name="flexibility"
+                  value="flexible"
+                  checked
+                />
+                Flexible - Schedule anytime</label
+              >
+              <label
+                ><input type="radio" name="flexibility" value="fixed" /> Fixed -
+                I'll set preferred time</label
+              >
+            </div>
+          </div>
+
+          <div class="form-group" id="preferredTimeGroup" style="display: none">
+            <label for="preferredTime">Preferred Time</label>
+            <input type="time" id="preferredTime" />
+          </div>
+
+          <div class="form-group">
+            <label for="taskCategory">Category *</label>
+            <select id="taskCategory" required>
+              <!-- Categories loaded dynamically -->
+            </select>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" id="cancelTaskBtn">
+              Cancel
+            </button>
+            <button type="submit" class="btn-save">Add Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Onboarding Modal -->
+    <div class="modal" id="onboardingModal">
+      <div class="modal-content onboarding-modal-content">
+        <div class="modal-header">
+          <h3>Welcome! Let's personalize your calendar</h3>
+        </div>
+
+        <div class="onboarding-content">
+          <p class="onboarding-intro">
+            Answer a few questions to help AI schedule your tasks optimally
+          </p>
+
+          <div class="preference-section">
+            <h4>When are you most productive?</h4>
+            <div class="checkbox-group">
+              <label
+                ><input
+                  type="checkbox"
+                  name="productiveHours"
+                  value="morning"
+                />
+                Morning (6 AM - 12 PM)</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  name="productiveHours"
+                  value="afternoon"
+                />
+                Afternoon (12 PM - 6 PM)</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  name="productiveHours"
+                  value="evening"
+                />
+                Evening (6 PM - 12 AM)</label
+              >
+              <label
+                ><input type="checkbox" name="productiveHours" value="night" />
+                Night (12 AM - 6 AM)</label
+              >
+            </div>
+          </div>
+
+          <div class="preference-section">
+            <h4>When do you prefer NOT to work?</h4>
+            <div class="checkbox-group">
+              <label
+                ><input
+                  type="checkbox"
+                  name="unproductiveHours"
+                  value="morning"
+                />
+                Morning (6 AM - 12 PM)</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  name="unproductiveHours"
+                  value="afternoon"
+                />
+                Afternoon (12 PM - 6 PM)</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  name="unproductiveHours"
+                  value="evening"
+                />
+                Evening (6 PM - 12 AM)</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  name="unproductiveHours"
+                  value="night"
+                />
+                Night (12 AM - 6 AM)</label
+              >
+            </div>
+          </div>
+
+          <div class="preference-section">
+            <h4>How long can you focus in one session?</h4>
+            <div class="radio-group">
+              <label
+                ><input type="radio" name="sessionLength" value="30" /> 30
+                minutes</label
+              >
+              <label
+                ><input type="radio" name="sessionLength" value="60" /> 1
+                hour</label
+              >
+              <label
+                ><input type="radio" name="sessionLength" value="120" checked />
+                2 hours</label
+              >
+              <label
+                ><input type="radio" name="sessionLength" value="180" /> 3
+                hours</label
+              >
+              <label
+                ><input type="radio" name="sessionLength" value="240" /> 4+
+                hours</label
+              >
+            </div>
+          </div>
+
+          <div class="preference-section">
+            <h4>Preferred break length?</h4>
+            <div class="radio-group">
+              <label
+                ><input type="radio" name="breakLength" value="5" /> 5
+                minutes</label
+              >
+              <label
+                ><input type="radio" name="breakLength" value="10" /> 10
+                minutes</label
+              >
+              <label
+                ><input type="radio" name="breakLength" value="15" checked /> 15
+                minutes</label
+              >
+              <label
+                ><input type="radio" name="breakLength" value="30" /> 30
+                minutes</label
+              >
+            </div>
+          </div>
+
+          <div class="onboarding-actions">
+            <button class="btn-skip" id="skipOnboardingBtn">
+              Skip for now
+            </button>
+            <button class="btn-save" id="savePreferencesBtn">
+              Save Preferences
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -339,5 +588,7 @@
     <script type="module" src="events.js"></script>
     <script type="module" src="holidays.js"></script>
     <script type="module" src="categories.js"></script>
+    <script type="module" src="onboarding.js"></script>
+    <script type="module" src="ai-planner.js"></script>
   </body>
 </html>

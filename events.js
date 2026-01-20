@@ -1,6 +1,7 @@
 // Firebase imports
 import { db, currentUser, formatDate } from './calendar.js';
-import { collection, addDoc, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { collection, addDoc, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getAllCategories, getCategoryById } from './categories.js';
 
 // Modal elements
 const eventModal = document.getElementById('eventModal');
@@ -17,9 +18,9 @@ const eventDateInput = document.getElementById('eventDate');
 const eventStartTimeInput = document.getElementById('eventStartTime');
 const eventEndTimeInput = document.getElementById('eventEndTime');
 const eventDescriptionInput = document.getElementById('eventDescription');
+const eventCategorySelect = document.getElementById('eventCategory');
 
 let currentEventId = null;
-let selectedColor = '#1a73e8'; // Default color
 
 // Event listeners
 createEventBtn.addEventListener('click', () => {
@@ -33,16 +34,6 @@ eventModal.addEventListener('click', (e) => {
     if (e.target === eventModal) {
         closeModal();
     }
-});
-
-// Color picker
-document.querySelectorAll('.color-option').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.color-option').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        selectedColor = btn.dataset.color;
-    });
 });
 
 // Form submission
@@ -68,8 +59,21 @@ window.addEventListener('openEventModal', (e) => {
     }
 });
 
+function loadCategoriesIntoDropdown() {
+    const categories = getAllCategories();
+    
+    eventCategorySelect.innerHTML = categories.map(category => `
+        <option value="${category.id}" style="color: ${category.color}">
+            ${category.name}
+        </option>
+    `).join('');
+}
+
 function openModal(dateStr = null, eventId = null) {
     currentEventId = eventId;
+    
+    // Load categories into dropdown
+    loadCategoriesIntoDropdown();
     
     if (eventId) {
         // Edit mode - load event data
@@ -82,10 +86,11 @@ function openModal(dateStr = null, eventId = null) {
         modalTitle.textContent = 'Create Event';
         deleteEventBtn.style.display = 'none';
         
-        // Set default color
-        document.querySelectorAll('.color-option').forEach(b => b.classList.remove('active'));
-        document.querySelector('.color-option[data-color="#1a73e8"]').classList.add('active');
-        selectedColor = '#1a73e8';
+        // Set default category (first one, usually Personal)
+        const categories = getAllCategories();
+        if (categories.length > 0) {
+            eventCategorySelect.value = categories[1]?.id || categories[0].id; // Default to Personal or first
+        }
         
         // Set date if provided
         if (dateStr) {
@@ -132,13 +137,13 @@ async function loadEventData(eventId) {
             eventStartTimeInput.value = data.startTime || '09:00';
             eventEndTimeInput.value = data.endTime || '10:00';
             
-            selectedColor = data.color || '#1a73e8';
-            
-            // Set active color
-            document.querySelectorAll('.color-option').forEach(b => b.classList.remove('active'));
-            const colorBtn = document.querySelector(`.color-option[data-color="${selectedColor}"]`);
-            if (colorBtn) {
-                colorBtn.classList.add('active');
+            // Set category if exists, otherwise default to first category
+            if (data.categoryId) {
+                eventCategorySelect.value = data.categoryId;
+            } else {
+                // Backward compatibility: event doesn't have category
+                const categories = getAllCategories();
+                eventCategorySelect.value = categories[0]?.id || '';
             }
         }
     } catch (error) {
@@ -153,8 +158,9 @@ async function saveEvent() {
     const startTime = eventStartTimeInput.value;
     const endTime = eventEndTimeInput.value;
     const description = eventDescriptionInput.value.trim();
+    const categoryId = eventCategorySelect.value;
     
-    if (!title || !date || !startTime || !endTime) {
+    if (!title || !date || !startTime || !endTime || !categoryId) {
         alert('Please fill in all required fields');
         return;
     }
@@ -165,7 +171,14 @@ async function saveEvent() {
         return;
     }
     
-    // Create event object
+    // Get category to get color
+    const category = getCategoryById(categoryId);
+    if (!category) {
+        alert('Selected category not found');
+        return;
+    }
+    
+    // Create event object with category info
     const eventData = {
         title,
         description,
@@ -173,7 +186,9 @@ async function saveEvent() {
         endDate: Timestamp.fromDate(new Date(date)),
         startTime,
         endTime,
-        color: selectedColor,
+        categoryId: category.id,
+        categoryName: category.name, // Denormalized for easy display
+        color: category.color, // Denormalized for easy display
         updatedAt: serverTimestamp()
     };
     
